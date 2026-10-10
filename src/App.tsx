@@ -18,7 +18,7 @@ function App() {
 
       <h2>デッキ</h2>
       {DECK.map((name) => (
-        <button key={name} onClick={() => addToHand(name)}>
+        <button key={name} onClick={() => addToHand(name)} disabled={hand.length >= 4}>
           {name}
         </button>
       ))}
@@ -26,7 +26,11 @@ function App() {
       <h2>手札（{hand.length}/4）</h2>
       <ul>
         {hand.map((name, i) => (
-          <li key={i}>{name}</li>
+          <li key={i}>
+            <button onClick={() => setHand(hand.filter((_, j) => j !== i))}>
+              {name}
+            </button>
+          </li>
         ))}
       </ul>
     </div>
