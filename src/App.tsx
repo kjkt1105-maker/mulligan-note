@@ -2,6 +2,8 @@ import { useState } from 'react'
 
 // 仮のカード名（あとで自分のデッキに置き換える）
 const DECK = ['カードA', 'カードB', 'カードC', 'カードD', 'カードE', 'カードF']
+// 先行・後攻のラベル
+const TURN_LABEL: Record<Turn, string> = { first: '先攻', second: '後攻' }
 
 // 手札のカードの型定義
 // name: カード名、returned: 返却するかどうか
@@ -9,10 +11,24 @@ type HandCard = {
   name: string
   returned: boolean
 }
+// 先行・後攻の型定義
+type Turn = 'first' | 'second'
+// マリガンの記録の型定義
+type MulliganRecord = {
+  hand: HandCard[]
+  turn: Turn
+  result: 'win' | 'lose' | null
+}
 
 function App() {
   // 手札：HandCardの配列。最初は空
   const [hand, setHand] = useState<HandCard[]>([])
+
+  // 先行・後攻の選択肢
+  const [turn, setTurn] = useState<Turn | null>(null)
+
+  // マリガンの記録
+  const [records, setRecords] = useState<MulliganRecord[]>([])
 
   const addToHand = (name: string) => {
     if (hand.length >= 4) return // 初期手札は4枚まで
@@ -21,6 +37,13 @@ function App() {
 
   const toggleReturned = (index: number) => {
     setHand(hand.map((card, i) => (i === index ? { ...card, returned: !card.returned } : card)))
+  }
+
+  const recordMulligan = () => {
+    if (turn === null || hand.length < 4) return
+    setRecords([...records, { hand, turn, result: null }])
+    setHand([]) // 手札をリセット
+    setTurn(null) // 先行・後攻の選択をリセット
   }
 
   return (
@@ -51,14 +74,30 @@ function App() {
           <li key={i}>{card.name}</li>
         ))}
       </ul>
-      <h2>RETURN</h2>
+      <h2>CHANGE</h2>
       <ul>
         {hand.filter((card) => card.returned).map((card, i) => (
           <li key={i}>{card.name}</li>
         ))}
       </ul>
 
-      <button onClick={() => setHand([])}>reset</button>
+      <select value={turn ?? ''} onChange={(e) => setTurn(e.target.value as Turn)}>
+        <option value="" disabled>先行・後攻を選択</option>
+        <option value="first">先行</option>
+        <option value="second">後攻</option>
+      </select>
+
+      <button onClick={recordMulligan} disabled={turn === null || hand.length < 4}>マリガンの記録</button>
+
+      <h2>マリガンの記録</h2>
+      <ul>
+        {records.map((record, i) => (
+          <li key={i}>
+            {TURN_LABEL[record.turn]} / KEEP: {record.hand.filter((card) => !card.returned).map((card) => card.name).join(', ')} / CHANGE: {record.hand.filter((card) => card.returned).map((card) => card.name).join(', ')} / 結果: {record.result ?? '未入力'}
+          </li>
+        ))}
+      </ul>
+
     </div>
   )
 }
