@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // 仮のカード名（あとで自分のデッキに置き換える）
 const DECK = ['カードA', 'カードB', 'カードC', 'カードD', 'カードE', 'カードF']
@@ -30,7 +30,21 @@ function App() {
   const [turn, setTurn] = useState<Turn | null>(null)
 
   // マリガンの記録
-  const [records, setRecords] = useState<MulliganRecord[]>([])
+  const [records, setRecords] = useState<MulliganRecord[]>(() => {
+    // ローカルストレージからマリガンの記録を取得する
+    const savedRecords = localStorage.getItem('mulliganRecords')
+    try {
+      return savedRecords ? JSON.parse(savedRecords) : []
+    } catch (e) {
+      console.error('Failed to parse mulliganRecords from localStorage', e)
+      return []
+    }
+  })
+
+  // recordsが更新されるたびにローカルストレージに保存する
+  useEffect(() => {
+    localStorage.setItem('mulliganRecords', JSON.stringify(records))
+  }, [records])
 
   // デッキから手札にカードを追加する関数
   const addToHand = (name: string) => {
