@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react'
+import type { HandCard, Turn, MulliganRecord, OpponentClass } from './types'
+import { CLASSES } from './types'
+import { calcWinRate, calcWinRateByClass } from './stats'
+import { loadRecords, saveRecords } from './storage'
 
 // 仮のカード名（あとで自分のデッキに置き換える）
 const DECK = ['カードA', 'カードB', 'カードC', 'カードD', 'カードE', 'カードF']
@@ -6,37 +10,6 @@ const DECK = ['カードA', 'カードB', 'カードC', 'カードD', 'カード
 const TURN_LABEL: Record<Turn, string> = { first: '先攻', second: '後攻' }
 // 勝敗のラベル
 const RESULT_LABEL: Record<'win' | 'lose' | 'null', string> = { win: '勝ち', lose: '負け', null: '未入力' }
-
-// 手札のカードの型定義
-// name: カード名、returned: 返却するかどうか
-type HandCard = {
-  name: string
-  returned: boolean
-}
-// 先行・後攻の型定義
-type Turn = 'first' | 'second'
-// マリガンの記録の型定義
-type MulliganRecord = {
-  hand: HandCard[]
-  turn: Turn
-  opponentClass: OpponentClass
-  result: 'win' | 'lose' | null
-}
-
-// 対戦相手のクラスの型定義
-const CLASSES = ['エルフ', 'ロイヤル', 'ウィッチ', 'ドラゴン', 'ナイトメア', 'ビショップ', 'ネメシス'] as const
-type OpponentClass = (typeof CLASSES)[number]
-
-function isMulliganRecord(value: unknown): value is MulliganRecord {
-  if (typeof value !== 'object' || value === null) return false
-  const record = value as MulliganRecord
-  return (
-    (Array.isArray(record.hand) && record.hand.every((card): card is HandCard => typeof card === 'object' && card !== null && typeof card.name === 'string' && typeof card.returned === 'boolean')) &&
-    (record.turn === 'first' || record.turn === 'second') &&
-    CLASSES.includes(record.opponentClass) &&
-    (record.result === 'win' || record.result === 'lose' || record.result === null)
-  )
-}
 
 function App() {
   // 手札：HandCardの配列。最初は空
@@ -49,25 +22,11 @@ function App() {
   const [opponentClass, setOpponentClass] = useState<OpponentClass | null>(null)
 
   // マリガンの記録
-  const [records, setRecords] = useState<MulliganRecord[]>(() => {
-    // ローカルストレージからマリガンの記録を取得する
-    const savedRecords = localStorage.getItem('mulliganRecords')
-    if (savedRecords) {
-      try {
-        const parsedRecords = JSON.parse(savedRecords)
-        if (Array.isArray(parsedRecords)) {
-          return parsedRecords.filter(isMulliganRecord) // 型ガードでフィルタリング
-        }
-      } catch (e) {
-        console.error('Failed to parse mulligan records from localStorage', e)
-      }
-    }
-    return []
-  })
+  const [records, setRecords] = useState<MulliganRecord[]>(loadRecords())
 
   // recordsが更新されるたびにローカルストレージに保存する
   useEffect(() => {
-    localStorage.setItem('mulliganRecords', JSON.stringify(records))
+    saveRecords(records)
   }, [records])
 
   // デッキから手札にカードを追加する関数
@@ -94,10 +53,9 @@ function App() {
   const recordResult = (result: MulliganRecord['result'], index: number) => {
     setRecords(records.map((record, i) => (i === index ? { ...record, result } : record)))
   }
-  const decided = records.filter((record) => record.result !== null)
-  const wins = records.filter((record) => record.result === 'win').length
-  const losses = decided.length - wins
-  const winRate = decided.length > 0 ? Math.round((wins / decided.length) * 100) : null
+
+  const overallStats = calcWinRate(records)
+  const byClassStats = calcWinRateByClass(records)
 
   return (
     <div>
@@ -150,9 +108,38 @@ function App() {
       <button onClick={recordMulligan} disabled={turn === null || hand.length < 4 || opponentClass === null}>マリガンの記録</button>
 
       <h2>集計</h2>
-      <p>
-        記録 {decided.length} 件 / 勝ち {wins} / 負け {losses} / 勝率 {winRate === null ? '-' : `${winRate}%`}
-      </p>
+      {(() => {
+        return (
+          <div>
+            <p>
+              記録 {overallStats.decided} 件 / 勝ち {overallStats.wins} / 負け {overallStats.losses} / 勝率 {overallStats.winRate === null ? '-' : `${overallStats.winRate}%`}
+            </p>
+            <h3>対戦相手のクラス別集計</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>クラス</th>
+                  <th>結果入力済みの記録</th>
+                  <th>勝ち</th>
+                  <th>負け</th>
+                  <th>勝率</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byClassStats.map((stats) => (
+                  <tr key={stats.cls}>
+                    <td>{stats.cls}</td>
+                    <td>{stats.decided}</td>
+                    <td>{stats.wins}</td>
+                    <td>{stats.losses}</td>
+                    <td>{stats.winRate === null ? '-' : `${stats.winRate}%`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      })()}
 
       <h2>マリガンの記録一覧</h2>
       <ul>
