@@ -19,7 +19,7 @@ type Turn = 'first' | 'second'
 type MulliganRecord = {
   hand: HandCard[]
   turn: Turn
-  opponentClass: OpponentClass | null
+  opponentClass: OpponentClass
   result: 'win' | 'lose' | null
 }
 
@@ -31,9 +31,9 @@ function isMulliganRecord(value: unknown): value is MulliganRecord {
   if (typeof value !== 'object' || value === null) return false
   const record = value as MulliganRecord
   return (
-    Array.isArray(record.hand) &&
+    (Array.isArray(record.hand) && record.hand.every((card): card is HandCard => typeof card === 'object' && card !== null && typeof card.name === 'string' && typeof card.returned === 'boolean')) &&
     (record.turn === 'first' || record.turn === 'second') &&
-    (record.opponentClass === null || CLASSES.includes(record.opponentClass)) &&
+    CLASSES.includes(record.opponentClass) &&
     (record.result === 'win' || record.result === 'lose' || record.result === null)
   )
 }
@@ -55,8 +55,8 @@ function App() {
     if (savedRecords) {
       try {
         const parsedRecords = JSON.parse(savedRecords)
-        if (Array.isArray(parsedRecords) && parsedRecords.every(isMulliganRecord)) {
-          return parsedRecords
+        if (Array.isArray(parsedRecords)) {
+          return parsedRecords.filter(isMulliganRecord) // 型ガードでフィルタリング
         }
       } catch (e) {
         console.error('Failed to parse mulligan records from localStorage', e)
