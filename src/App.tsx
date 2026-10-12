@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 const DECK = ['カードA', 'カードB', 'カードC', 'カードD', 'カードE', 'カードF']
 // 先行・後攻のラベル
 const TURN_LABEL: Record<Turn, string> = { first: '先攻', second: '後攻' }
-
+// 勝敗のラベル
 const RESULT_LABEL: Record<'win' | 'lose' | 'null', string> = { win: '勝ち', lose: '負け', null: '未入力' }
 
 // 手札のカードの型定義
@@ -19,7 +19,23 @@ type Turn = 'first' | 'second'
 type MulliganRecord = {
   hand: HandCard[]
   turn: Turn
+  opponentClass: OpponentClass | null
   result: 'win' | 'lose' | null
+}
+
+// 対戦相手のクラスの型定義
+const CLASSES = ['エルフ', 'ロイヤル', 'ウィッチ', 'ドラゴン', 'ナイトメア', 'ビショップ', 'ネメシス'] as const
+type OpponentClass = (typeof CLASSES)[number]
+
+function isMulliganRecord(value: unknown): value is MulliganRecord {
+  if (typeof value !== 'object' || value === null) return false
+  const record = value as MulliganRecord
+  return (
+    Array.isArray(record.hand) &&
+    (record.turn === 'first' || record.turn === 'second') &&
+    (record.opponentClass === null || CLASSES.includes(record.opponentClass)) &&
+    (record.result === 'win' || record.result === 'lose' || record.result === null)
+  )
 }
 
 function App() {
@@ -29,16 +45,24 @@ function App() {
   // 先行・後攻の選択肢
   const [turn, setTurn] = useState<Turn | null>(null)
 
+  // 対戦相手のクラスの選択肢
+  const [opponentClass, setOpponentClass] = useState<OpponentClass | null>(null)
+
   // マリガンの記録
   const [records, setRecords] = useState<MulliganRecord[]>(() => {
     // ローカルストレージからマリガンの記録を取得する
     const savedRecords = localStorage.getItem('mulliganRecords')
-    try {
-      return savedRecords ? JSON.parse(savedRecords) : []
-    } catch (e) {
-      console.error('Failed to parse mulliganRecords from localStorage', e)
-      return []
+    if (savedRecords) {
+      try {
+        const parsedRecords = JSON.parse(savedRecords)
+        if (Array.isArray(parsedRecords) && parsedRecords.every(isMulliganRecord)) {
+          return parsedRecords
+        }
+      } catch (e) {
+        console.error('Failed to parse mulligan records from localStorage', e)
+      }
     }
+    return []
   })
 
   // recordsが更新されるたびにローカルストレージに保存する
@@ -59,10 +83,11 @@ function App() {
 
   // マリガンの記録を追加する関数
   const recordMulligan = () => {
-    if (turn === null || hand.length < 4) return
-    setRecords([...records, { hand, turn, result: null }])
+    if (turn === null || hand.length < 4 || opponentClass === null) return
+    setRecords([...records, { hand, turn, opponentClass, result: null }])
     setHand([]) // 手札をリセット
     setTurn(null) // 先行・後攻の選択をリセット
+    setOpponentClass(null) // 対戦相手のクラスの選択をリセット
   }
 
   // マリガンの結果を記録する関数
@@ -115,7 +140,14 @@ function App() {
         <option value="second">後攻</option>
       </select>
 
-      <button onClick={recordMulligan} disabled={turn === null || hand.length < 4}>マリガンの記録</button>
+      <select value={opponentClass ?? ''} onChange={(e) => setOpponentClass(e.target.value as OpponentClass)}>
+        <option value="" disabled>対戦相手のクラスを選択</option>
+        {CLASSES.map((cls) => (
+          <option key={cls} value={cls}>{cls}</option>
+        ))}
+      </select>
+
+      <button onClick={recordMulligan} disabled={turn === null || hand.length < 4 || opponentClass === null}>マリガンの記録</button>
 
       <h2>集計</h2>
       <p>
@@ -126,7 +158,7 @@ function App() {
       <ul>
         {records.map((record, i) => (
           <li key={i}>
-            {TURN_LABEL[record.turn]} / KEEP: {record.hand.filter((card) => !card.returned).map((card) => card.name).join(', ')} / CHANGE: {record.hand.filter((card) => card.returned).map((card) => card.name).join(', ')} / 結果: {RESULT_LABEL[record.result ?? 'null']}
+            {TURN_LABEL[record.turn]} / 対戦相手: {record.opponentClass} / KEEP: {record.hand.filter((card) => !card.returned).map((card) => card.name).join(', ')} / CHANGE: {record.hand.filter((card) => card.returned).map((card) => card.name).join(', ')} / 結果: {RESULT_LABEL[record.result ?? 'null']}
             {record.result === null ? (
               <>
                 <button onClick={() => recordResult('win', i)}>勝ち</button>
