@@ -19,3 +19,30 @@ export function calcWinRateByClass(records: MulliganRecord[]) {
     return { cls, decided, wins, losses, winRate }
   })
 }
+
+export function calcWinRateByKeptCard(records: MulliganRecord[]) {
+  // カード名ごとに { name, decided, wins, losses, winRate } を返す
+  // 処理
+  // 1. マリガンレコードの配列から一つのマリガンレコードを取り出す
+  // 2. そのマリガンレコードの hand の配列から返却しなかったカードを取り出す
+  // 3. そのカード名をキーにして、Map にマリガンレコードを追加する
+  // 4. Map の各エントリについて、calcWinRate を呼び出して集計する
+
+  const cardMap = new Map<string, MulliganRecord[]>()
+  for (const record of records) {
+    if (record.result === null) continue // 結果が未入力の記録は無視
+    const seenCards = new Set<string>() // 1つの記録内で同じカード名が複数ある場合は1回だけカウントするためのセット
+    for (const card of record.hand) {
+      if (!card.returned && !seenCards.has(card.name)) {
+        seenCards.add(card.name)
+        const list = cardMap.get(card.name) ?? []
+        list.push(record)
+        cardMap.set(card.name, list)
+      }
+    }
+  }
+  return Array.from(cardMap.entries()).map(([name, rs]) => {
+    const { decided, wins, losses, winRate } = calcWinRate(rs)
+    return { name, decided, wins, losses, winRate }
+  })
+}

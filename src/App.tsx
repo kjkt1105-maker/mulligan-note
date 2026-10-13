@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { HandCard, Turn, MulliganRecord, OpponentClass } from './types'
 import { CLASSES } from './types'
-import { calcWinRate, calcWinRateByClass } from './stats'
+import { calcWinRate, calcWinRateByClass, calcWinRateByKeptCard } from './stats'
 import { loadRecords, saveRecords } from './storage'
 
 // 仮のカード名（あとで自分のデッキに置き換える）
@@ -56,6 +56,9 @@ function App() {
 
   const overallStats = calcWinRate(records)
   const byClassStats = calcWinRateByClass(records)
+  const byCardStats = [...calcWinRateByKeptCard(records)].sort(
+    (a, b) => b.decided - a.decided || a.name.localeCompare(b.name),
+  )
 
   return (
     <div>
@@ -108,38 +111,60 @@ function App() {
       <button onClick={recordMulligan} disabled={turn === null || hand.length < 4 || opponentClass === null}>マリガンの記録</button>
 
       <h2>集計</h2>
-      {(() => {
-        return (
-          <div>
-            <p>
-              記録 {overallStats.decided} 件 / 勝ち {overallStats.wins} / 負け {overallStats.losses} / 勝率 {overallStats.winRate === null ? '-' : `${overallStats.winRate}%`}
-            </p>
-            <h3>対戦相手のクラス別集計</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>クラス</th>
-                  <th>結果入力済みの記録</th>
-                  <th>勝ち</th>
-                  <th>負け</th>
-                  <th>勝率</th>
-                </tr>
-              </thead>
-              <tbody>
-                {byClassStats.map((stats) => (
-                  <tr key={stats.cls}>
-                    <td>{stats.cls}</td>
-                    <td>{stats.decided}</td>
-                    <td>{stats.wins}</td>
-                    <td>{stats.losses}</td>
-                    <td>{stats.winRate === null ? '-' : `${stats.winRate}%`}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
-      })()}
+      <div>
+        <p>
+          記録 {overallStats.decided} 件 / 勝ち {overallStats.wins} / 負け {overallStats.losses} / 勝率 {overallStats.winRate === null ? '-' : `${overallStats.winRate}%`}
+        </p>
+        <h3>対戦相手のクラス別集計</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>クラス</th>
+              <th>結果入力済みの記録</th>
+              <th>勝ち</th>
+              <th>負け</th>
+              <th>勝率</th>
+            </tr>
+          </thead>
+          <tbody>
+            {byClassStats.map((stats) => (
+              <tr key={stats.cls}>
+                <td>{stats.cls}</td>
+                <td>{stats.decided}</td>
+                <td>{stats.wins}</td>
+                <td>{stats.losses}</td>
+                <td>{stats.winRate === null ? '-' : `${stats.winRate}%`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>キープしたカード別集計</h2>
+      <div>
+        <table>
+          <thead>
+            <tr>
+              <th>カード名</th>
+              <th>結果入力済みの記録</th>
+              <th>勝ち</th>
+              <th>負け</th>
+              <th>勝率</th>
+            </tr>
+          </thead>
+          <tbody>
+            {byCardStats.map((stats) => (
+              <tr key={stats.name}>
+                <td>{stats.name}</td>
+                <td>{stats.decided}</td>
+                <td>{stats.wins}</td>
+                <td>{stats.losses}</td>
+                <td>{stats.winRate === null ? '-' : `${stats.winRate}%`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h2>マリガンの記録一覧</h2>
       <ul>

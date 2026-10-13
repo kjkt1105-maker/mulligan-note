@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calcWinRate, calcWinRateByClass } from './stats'
+import { calcWinRate, calcWinRateByClass, calcWinRateByKeptCard } from './stats'
 import type { MulliganRecord } from './types'
 
 // テスト用の記録を作る関数（必要な項目だけ上書きできる）
@@ -70,3 +70,96 @@ describe('calcWinRateByClass', () => {
     expect(stats.find((s) => s.cls === 'ロイヤル')).toEqual({ cls: 'ロイヤル', decided: 3, wins: 2, losses: 1, winRate: 67 })
   })
 })
+
+describe('calcWinRateByKeptCard', () => {
+  it('記録が0件のとき、空の配列を返す', () => {
+    const stats = calcWinRateByKeptCard([])
+    expect(stats).toEqual([])
+  })
+
+  it('「A、B、C、Dをキープして勝った1件」→ 4種類のカードが、それぞれ1勝', () => {
+    const records = [
+      makeRecord({ hand: [{ name: 'カード1', returned: false }, { name: 'カード2', returned: false }, { name: 'カード3', returned: false }, { name: 'カード4', returned: false }], result: 'win' }),
+    ]
+    const stats = calcWinRateByKeptCard(records)
+    expect(stats).toEqual([
+      { name: 'カード1', decided: 1, wins: 1, losses: 0, winRate: 100 },
+      { name: 'カード2', decided: 1, wins: 1, losses: 0, winRate: 100 },
+      { name: 'カード3', decided: 1, wins: 1, losses: 0, winRate: 100 },
+      { name: 'カード4', decided: 1, wins: 1, losses: 0, winRate: 100 },
+    ])
+  })
+
+  it('「同じカードを2枚キープした1件」→ そのカードの decided が1になる', () => {
+    const records = [
+      makeRecord({ hand: [{ name: 'A', returned: false }, { name: 'A', returned: false }, { name: 'B', returned: false }, { name: 'C', returned: false }], result: 'win' }),
+    ]
+    const stats = calcWinRateByKeptCard(records)
+    expect(stats).toEqual([
+      { name: 'A', decided: 1, wins: 1, losses: 0, winRate: 100 },
+      { name: 'B', decided: 1, wins: 1, losses: 0, winRate: 100 },
+      { name: 'C', decided: 1, wins: 1, losses: 0, winRate: 100 },
+    ])
+  })
+
+  it('「返したカードは数えない」', () => {
+    const records = [
+      makeRecord({ hand: [{ name: 'A', returned: false }, { name: 'B', returned: true }, { name: 'C', returned: false }, { name: 'D', returned: false }], result: 'win' }),
+    ]
+    const stats = calcWinRateByKeptCard(records)
+    expect(stats).toEqual([
+      { name: 'A', decided: 1, wins: 1, losses: 0, winRate: 100 },
+      { name: 'C', decided: 1, wins: 1, losses: 0, winRate: 100 },
+      { name: 'D', decided: 1, wins: 1, losses: 0, winRate: 100 },
+    ])
+  })
+
+  it('同じカードを複数の試合でキープしたとき、試合ごとに数える', () => {
+    const hand = [
+      { name: 'A', returned: false },
+      { name: 'B', returned: false },
+      { name: 'C', returned: false },
+      { name: 'D', returned: false },
+    ]
+    const records = [
+      makeRecord({ hand, result: 'win' }),
+      makeRecord({ hand, result: 'lose' }),
+    ]
+    const stats = calcWinRateByKeptCard(records)
+    expect(stats.find((s) => s.name === 'A')).toEqual({
+      name: 'A', decided: 2, wins: 1, losses: 1, winRate: 50,
+    })
+  })
+
+    it('結果が未入力の記録は数えない', () => {
+      // 勝ち1件と、未入力1件で同じカードをキープ → decided は 1
+      const hand = [
+        { name: 'A', returned: false },
+        { name: 'B', returned: false },
+        { name: 'C', returned: false },
+        { name: 'D', returned: false },
+      ]
+      const records = [
+        makeRecord({ hand, result: 'win' }),
+        makeRecord({ hand, result: null }),
+      ]
+      const stats = calcWinRateByKeptCard(records)
+      expect(stats.find((s) => s.name === 'A')).toEqual({
+        name: 'A', decided: 1, wins: 1, losses: 0, winRate: 100,
+      })
+    })
+
+    it('未入力の記録でしかキープしていないカードは、一覧に出ない', () => {
+      const hand = [
+        { name: 'A', returned: false },
+        { name: 'B', returned: false },
+        { name: 'C', returned: false },
+        { name: 'D', returned: false },
+      ]
+      const records = [
+        makeRecord({ hand, result: null }),
+      ]
+      const stats = calcWinRateByKeptCard(records)
+      expect(stats.find((s) => s.name === 'A')).toBeUndefined()
+    })
+  })
