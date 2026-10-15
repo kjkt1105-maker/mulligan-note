@@ -1,4 +1,4 @@
-import type { MulliganRecord, OpponentClass, Turn, RecordFilter } from './types'
+import type { MulliganRecord, RecordFilter } from './types'
 import { CLASSES } from './types'
 
 export function calcWinRate(records: MulliganRecord[]) {

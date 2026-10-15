@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react'
 import type { HandCard, Turn, MulliganRecord, OpponentClass, RecordFilter } from './types'
 import { CLASSES } from './types'
 import { calcWinRate, calcWinRateByClass, calcWinRateByKeptCard, filterRecords } from './stats'
-import { loadRecords, saveRecords } from './storage'
+import { loadRecords, saveRecords, loadDeck, saveDeck } from './storage'
+import { addCard, removeCard } from './deck'
 
-// 仮のカード名（あとで自分のデッキに置き換える）
-const DECK = ['カードA', 'カードB', 'カードC', 'カードD', 'カードE', 'カードF']
 // 先行・後攻のラベル
 const TURN_LABEL: Record<Turn, string> = { first: '先攻', second: '後攻' }
 // 勝敗のラベル
@@ -20,6 +19,8 @@ function App() {
 
   // 対戦相手のクラスの選択肢
   const [opponentClass, setOpponentClass] = useState<OpponentClass | null>(null)
+  // デッキ
+  const [deck, setDeck] = useState(loadDeck)
 
   // マリガンの記録
   const [records, setRecords] = useState(loadRecords)
@@ -27,10 +28,18 @@ function App() {
   // 記録の絞り込み条件
   const [filter, setFilter] = useState<RecordFilter>({})
 
+  // 新しいカード名の入力値
+  const [inputCardName, setInputCardName] = useState('')
+
   // recordsが更新されるたびにローカルストレージに保存する
   useEffect(() => {
     saveRecords(records)
   }, [records])
+
+  // deckが更新されるたびにローカルストレージに保存する
+  useEffect(() => {
+    saveDeck(deck)
+  }, [deck])
 
   // デッキから手札にカードを追加する関数
   const addToHand = (name: string) => {
@@ -67,8 +76,35 @@ function App() {
     <div>
       <h1>マリガンノート</h1>
 
+      <h2>デッキの管理</h2>
+      <ul>
+        {deck.map((name) => (
+          <li key={name}>
+            {name} <button onClick={() => { setDeck(removeCard(deck, name)); }}>削除</button>
+          </li>
+        ))}
+      </ul>
+
+      <form onSubmit={(e) => {
+        e.preventDefault()
+        if (inputCardName.trim() !== '') {
+          setDeck(addCard(deck, inputCardName.trim()))
+          setInputCardName('')
+        }
+      }}>
+        <input
+          type="text"
+          id="newCard"
+          placeholder="カード名を入力"
+          aria-label="カード名"
+          value={inputCardName}
+          onChange={(e) => setInputCardName(e.target.value)}
+        />
+        <button type="submit">追加</button>
+      </form>
+
       <h2>デッキ</h2>
-      {DECK.map((name) => (
+      {deck.map((name) => (
         <button key={name} onClick={() => addToHand(name)} disabled={hand.length >= 4}>
           {name}
         </button>

@@ -27,6 +27,10 @@ export function isMulliganRecord(value: unknown): value is MulliganRecord {
   )
 }
 
+export function isDeck(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((card) => typeof card === 'string')
+}
+
 // 対戦相手のクラスの型定義
 export const CLASSES = ['エルフ', 'ロイヤル', 'ウィッチ', 'ドラゴン', 'ナイトメア', 'ビショップ', 'ネメシス'] as const
 export type OpponentClass = (typeof CLASSES)[number]

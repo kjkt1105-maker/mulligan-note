@@ -1,5 +1,5 @@
 import type { MulliganRecord } from './types'
-import { isMulliganRecord } from './types'
+import { isMulliganRecord, isDeck } from './types'
 
 export function loadRecords(): MulliganRecord[] {
   const savedRecords = localStorage.getItem('mulliganRecords')
@@ -17,4 +17,22 @@ export function loadRecords(): MulliganRecord[] {
 }
 export function saveRecords(records: MulliganRecord[]): void {
   localStorage.setItem('mulliganRecords', JSON.stringify(records))
+}
+
+export function loadDeck(): string[] {
+  const savedDeck = localStorage.getItem('mulliganDeck')
+  if (savedDeck) {
+    try {
+      const parsedDeck = JSON.parse(savedDeck)
+      if (isDeck(parsedDeck)) {
+        return parsedDeck
+      }
+    } catch (e) {
+      console.error('Failed to parse mulligan deck from localStorage', e)
+    }
+  }
+  return []
+}
+export function saveDeck(deck: string[]): void {
+  localStorage.setItem('mulliganDeck', JSON.stringify(deck))
 }

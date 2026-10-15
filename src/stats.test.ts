@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { calcWinRate, calcWinRateByClass, calcWinRateByKeptCard, filterRecords } from './stats'
 import type { MulliganRecord } from './types'
+import { addCard, removeCard } from './deck'
 
 // テスト用の記録を作る関数（必要な項目だけ上書きできる）
 const makeRecord = (overrides: Partial<MulliganRecord> = {}): MulliganRecord => ({
@@ -187,5 +188,40 @@ describe('filterRecords', () => {
     ]
     const filtered = filterRecords(records, { opponentClass: 'エルフ', turn: 'first' })
     expect(filtered).toEqual([records[0]])
+  })
+})
+
+describe('addCard', () => {
+  it('空文字は追加しない', () => {
+    const deck = ['A', 'B']
+    expect(addCard(deck, '')).toEqual(deck)
+  })
+
+  it('すでに登録されているカードは追加しない', () => {
+    const deck = ['A', 'B']
+    expect(addCard(deck, 'A')).toEqual(deck)
+  })
+
+  it('空白を含むカード名は前後の空白を除いて追加する', () => {
+    const deck = ['A', 'B']
+    expect(addCard(deck, ' C ')).toEqual(['A', 'B', 'C'])
+  })
+
+  it('addCard は、元の配列を書き換えない', () => {
+    const deck = ['A']
+    addCard(deck, 'B')
+    expect(deck).toEqual(['A'])
+  })
+})
+
+describe('removeCard', () => {
+  it('存在しないカードは削除しない', () => {
+    const deck = ['A', 'B']
+    expect(removeCard(deck, 'C')).toEqual(deck)
+  })
+
+  it('存在するカードは削除する', () => {
+    const deck = ['A', 'B']
+    expect(removeCard(deck, 'B')).toEqual(['A'])
   })
 })
