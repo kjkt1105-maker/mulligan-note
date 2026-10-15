@@ -30,3 +30,8 @@ export function isMulliganRecord(value: unknown): value is MulliganRecord {
 // 対戦相手のクラスの型定義
 export const CLASSES = ['エルフ', 'ロイヤル', 'ウィッチ', 'ドラゴン', 'ナイトメア', 'ビショップ', 'ネメシス'] as const
 export type OpponentClass = (typeof CLASSES)[number]
+
+export type RecordFilter = {
+  opponentClass?: OpponentClass
+  turn?: Turn
+}

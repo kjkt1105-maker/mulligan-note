@@ -1,4 +1,4 @@
-import type { MulliganRecord } from './types'
+import type { MulliganRecord, OpponentClass, Turn, RecordFilter } from './types'
 import { CLASSES } from './types'
 
 export function calcWinRate(records: MulliganRecord[]) {
@@ -44,5 +44,17 @@ export function calcWinRateByKeptCard(records: MulliganRecord[]) {
   return Array.from(cardMap.entries()).map(([name, rs]) => {
     const { decided, wins, losses, winRate } = calcWinRate(rs)
     return { name, decided, wins, losses, winRate }
+  })
+}
+
+export function filterRecords(records: MulliganRecord[], filter: RecordFilter) : MulliganRecord[] {
+  // 指定された条件に合う記録だけを返す。条件が未指定なら、その条件では絞り込まない
+  return records.filter((r) => {
+    // opponentClass と turn の両方が指定されていない場合は、全件返す
+    // opponentClass が指定されている場合は、そのクラスの記録だけを返す
+    if (filter.opponentClass && r.opponentClass !== filter.opponentClass) return false
+    // turn が指定されている場合は、そのターンの記録だけを返す
+    if (filter.turn && r.turn !== filter.turn) return false
+    return true
   })
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import type { HandCard, Turn, MulliganRecord, OpponentClass } from './types'
+import type { HandCard, Turn, MulliganRecord, OpponentClass, RecordFilter } from './types'
 import { CLASSES } from './types'
-import { calcWinRate, calcWinRateByClass, calcWinRateByKeptCard } from './stats'
+import { calcWinRate, calcWinRateByClass, calcWinRateByKeptCard, filterRecords } from './stats'
 import { loadRecords, saveRecords } from './storage'
 
 // 仮のカード名（あとで自分のデッキに置き換える）
@@ -22,7 +22,10 @@ function App() {
   const [opponentClass, setOpponentClass] = useState<OpponentClass | null>(null)
 
   // マリガンの記録
-  const [records, setRecords] = useState<MulliganRecord[]>(loadRecords())
+  const [records, setRecords] = useState(loadRecords)
+
+  // 記録の絞り込み条件
+  const [filter, setFilter] = useState<RecordFilter>({})
 
   // recordsが更新されるたびにローカルストレージに保存する
   useEffect(() => {
@@ -56,7 +59,7 @@ function App() {
 
   const overallStats = calcWinRate(records)
   const byClassStats = calcWinRateByClass(records)
-  const byCardStats = [...calcWinRateByKeptCard(records)].sort(
+  const byCardStats = [...calcWinRateByKeptCard(filterRecords(records, filter))].sort(
     (a, b) => b.decided - a.decided || a.name.localeCompare(b.name),
   )
 
@@ -141,6 +144,17 @@ function App() {
       </div>
 
       <h2>キープしたカード別集計</h2>
+      <select value={filter.opponentClass ?? ''} onChange={(e) => setFilter({ ...filter, opponentClass: e.target.value === '' ? undefined : (e.target.value as OpponentClass) })}>
+        <option value="">全クラス</option>
+        {CLASSES.map((cls) => (
+          <option key={cls} value={cls}>{cls}</option>
+        ))}
+      </select>
+      <select value={filter.turn ?? ''} onChange={(e) => setFilter({ ...filter, turn: e.target.value === '' ? undefined : (e.target.value as Turn) })}>
+        <option value="">先後両方</option>
+        <option value="first">先攻</option>
+        <option value="second">後攻</option>
+      </select>
       <div>
         <table>
           <thead>

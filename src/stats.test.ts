@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { calcWinRate, calcWinRateByClass, calcWinRateByKeptCard } from './stats'
+import { calcWinRate, calcWinRateByClass, calcWinRateByKeptCard, filterRecords } from './stats'
 import type { MulliganRecord } from './types'
 
 // テスト用の記録を作る関数（必要な項目だけ上書きできる）
 const makeRecord = (overrides: Partial<MulliganRecord> = {}): MulliganRecord => ({
-  hand: [],
+  hand: [
+    { name: 'A', returned: false },
+    { name: 'B', returned: false },
+    { name: 'C', returned: false },
+    { name: 'D', returned: false },
+  ],
   turn: 'first',
   opponentClass: 'エルフ',
   result: null,
@@ -115,15 +120,9 @@ describe('calcWinRateByKeptCard', () => {
   })
 
   it('同じカードを複数の試合でキープしたとき、試合ごとに数える', () => {
-    const hand = [
-      { name: 'A', returned: false },
-      { name: 'B', returned: false },
-      { name: 'C', returned: false },
-      { name: 'D', returned: false },
-    ]
     const records = [
-      makeRecord({ hand, result: 'win' }),
-      makeRecord({ hand, result: 'lose' }),
+      makeRecord({ result: 'win' }),
+      makeRecord({ result: 'lose' }),
     ]
     const stats = calcWinRateByKeptCard(records)
     expect(stats.find((s) => s.name === 'A')).toEqual({
@@ -131,35 +130,62 @@ describe('calcWinRateByKeptCard', () => {
     })
   })
 
-    it('結果が未入力の記録は数えない', () => {
-      // 勝ち1件と、未入力1件で同じカードをキープ → decided は 1
-      const hand = [
-        { name: 'A', returned: false },
-        { name: 'B', returned: false },
-        { name: 'C', returned: false },
-        { name: 'D', returned: false },
-      ]
-      const records = [
-        makeRecord({ hand, result: 'win' }),
-        makeRecord({ hand, result: null }),
-      ]
-      const stats = calcWinRateByKeptCard(records)
-      expect(stats.find((s) => s.name === 'A')).toEqual({
-        name: 'A', decided: 1, wins: 1, losses: 0, winRate: 100,
-      })
-    })
-
-    it('未入力の記録でしかキープしていないカードは、一覧に出ない', () => {
-      const hand = [
-        { name: 'A', returned: false },
-        { name: 'B', returned: false },
-        { name: 'C', returned: false },
-        { name: 'D', returned: false },
-      ]
-      const records = [
-        makeRecord({ hand, result: null }),
-      ]
-      const stats = calcWinRateByKeptCard(records)
-      expect(stats.find((s) => s.name === 'A')).toBeUndefined()
+  it('結果が未入力の記録は数えない', () => {
+    // 勝ち1件と、未入力1件で同じカードをキープ → decided は 1
+    const records = [
+      makeRecord({ result: 'win' }),
+      makeRecord({ result: null }),
+    ]
+    const stats = calcWinRateByKeptCard(records)
+    expect(stats.find((s) => s.name === 'A')).toEqual({
+      name: 'A', decided: 1, wins: 1, losses: 0, winRate: 100,
     })
   })
+
+  it('未入力の記録でしかキープしていないカードは、一覧に出ない', () => {
+    const records = [
+      makeRecord({ result: null }),
+    ]
+    const stats = calcWinRateByKeptCard(records)
+    expect(stats.find((s) => s.name === 'A')).toBeUndefined()
+  })
+})
+
+describe('filterRecords', () => {
+  it('条件が未指定なら、全件返す', () => {
+    const records = [
+      makeRecord({ result: 'win' }),
+      makeRecord({ result: 'lose' }),
+    ]
+    const filtered = filterRecords(records, {})
+    expect(filtered).toEqual(records)
+  })
+
+  it('opponentClass だけ指定したとき、そのクラスの記録だけを返す', () => {
+    const records = [
+      makeRecord({ result: 'win', opponentClass: 'エルフ' }),
+      makeRecord({ result: 'lose', opponentClass: 'ロイヤル' }),
+    ]
+    const filtered = filterRecords(records, { opponentClass: 'エルフ' })
+    expect(filtered).toEqual([records[0]])
+  })
+
+  it('turn だけ指定したとき、そのターンの記録だけを返す', () => {
+    const records = [
+      makeRecord({ result: 'win', turn: 'first' }),
+      makeRecord({ result: 'lose', turn: 'second' }),
+    ]
+    const filtered = filterRecords(records, { turn: 'first' })
+    expect(filtered).toEqual([records[0]])
+  })
+
+  it('opponentClass と turn の両方を指定したとき、両方に合致する記録だけを返す', () => {
+    const records = [
+      makeRecord({ result: 'win', opponentClass: 'エルフ', turn: 'first' }),
+      makeRecord({ result: 'lose', opponentClass: 'エルフ', turn: 'second' }),
+      makeRecord({ result: 'win', opponentClass: 'ロイヤル', turn: 'first' }),
+    ]
+    const filtered = filterRecords(records, { opponentClass: 'エルフ', turn: 'first' })
+    expect(filtered).toEqual([records[0]])
+  })
+})
