@@ -2,7 +2,7 @@
 
 シャドウバース ワールズビヨンドの**マリガン（初手の交換）を素早く記録し、キープしたカード別の勝率を分析する**Webアプリです。
 
-**公開URL：** https://mulligan-note-d1ydjj9x3-kojiroooo.vercel.app/
+**公開URL：** https://mulligan-note.vercel.app/
 
 <!-- スクリーンショットを docs/screenshot.png に置いたら、下の行のコメントを外す -->
 <!-- ![マリガンノートの画面](docs/screenshot.png) -->
