@@ -1,75 +1,92 @@
-# React + TypeScript + Vite
+# マリガンノート
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+シャドウバース ワールズビヨンドの**マリガン（初手の交換）を素早く記録し、キープしたカード別の勝率を分析する**Webアプリです。
 
-Currently, two official plugins are available:
+**公開URL：** https://mulligan-note-d1ydjj9x3-kojiroooo.vercel.app/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+<!-- スクリーンショットを docs/screenshot.png に置いたら、下の行のコメントを外す -->
+<!-- ![マリガンノートの画面](docs/screenshot.png) -->
 
-## React Compiler
+## 作った目的
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+マリガンの記録をデータとして残し、次の3つを分析できるようにすることです。
 
-## Expanding the ESLint configuration
+- 対面クラス別：どのカードをキープしたとき勝率が高いか
+- 先攻／後攻別：どのカードをキープしたとき勝率が高いか
+- セットでキープすることが多いカードはどれか（未実装）
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 課題 → 検証 → 判断
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+実装に入る前に、まずスプレッドシートで手動記録して、何が問題になるかを確かめました。
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| 段階 | 内容 |
+| --- | --- |
+| 課題 | 手動記録は非常に面倒だった。原因は4つ：「カード名を探す」「項目が多い」「試合後に初手を思い出す」「入力するタイミングがない」 |
+| 判断 | このアプリの一番の価値は「速く楽に記録できること」。分析はその次にする |
+| 判断 | 入力の流れをゲームのマリガン画面（残す／返す）に合わせる |
+| 判断 | 2段階で記録する：マリガン直後に手札と先攻／後攻・対面クラスを入れて記録 → 試合後に勝敗を1タップで入力 |
+| 検証 | 試作版を実際に使うと、入力時間は想像以上に短くなった |
+| 判断 | 当初考えていたスクリーンショットからの自動入力は、見送ることにした |
+| 残った課題 | 「デッキ登録の手間」と「カード名だけだと初手のカードを探しにくい」 |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 機能
 
+- デッキの登録・削除（カード名の手入力）
+- 初手4枚の選択と、KEEP／CHANGE の切り替え（カードをタップ）
+- 先攻／後攻、対面クラス（7クラス）の選択と、マリガンの記録
+- 勝敗の後入力（取り消し可）
+- 集計：全体の勝率、対面クラス別の勝率
+- キープしたカード別の勝率（対面クラス・先攻／後攻で絞り込み可）
+- 記録とデッキの自動保存（ブラウザの localStorage）
+
+## 技術スタック
+
+- React 19 / TypeScript / Vite
+- ESLint / Vitest
+- Vercel（公開）
+
+## 設計のポイント
+
+- **計算を画面から分離**：集計のロジックは `src/stats.ts` の純粋な関数にし、画面（React）とは別にテストできるようにしました。
+- **集計の仕様を明文化してテスト化**：
+  - 同じカードを2枚キープしても、「そのカードをキープした試合」は1試合と数える
+  - 勝敗が未入力の記録は、勝率の計算に含めない
+  - 返したカード（CHANGE）は、キープ別の集計に含めない
+- **保存データの検証**：`localStorage` から読み込んだデータは型が保証されないため、型ガードで1件ずつ検証し、形式が壊れた記録だけを除外します（有効な記録は残ります）。
+- **状態を直接書き換えない**：デッキの追加・削除などは、元の配列を変更せず、新しい配列を返す関数にしています。
+- **対面クラスは記録時に必須**：試合開始時点で分かる情報なので、先攻／後攻と同じく未選択では記録できないようにしています。
+
+## 開発
+
+```bash
+npm install
+npm run dev     # 開発サーバーを起動
+npm test        # テストを実行（監視モード）
+npm run lint    # ESLint
+npm run build   # 本番ビルド
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+ファイル構成：
 
 ```
+src/
+  App.tsx        画面と状態
+  types.ts       型と定数（クラス一覧など）
+  stats.ts       勝率の集計・絞り込み
+  stats.test.ts  集計のテスト
+  deck.ts        デッキの追加・削除
+  storage.ts     localStorage への保存・読み込み
+```
+
+## 既知の制限と今後の予定
+
+- **データはブラウザごとに保存されます**。PCとスマホなど、端末をまたいでは共有できません。外部DB（Supabase など）での保存を検討しています。
+- **カード名を探しにくい**：一覧からの選択に加え、名前での絞り込み検索を追加する予定です。
+- **デザイン**：現状は最小限のスタイルのみです。スマホで操作しやすい画面に改善する予定です。
+- キープ時だけでなく、返したカードの勝率の分析（未実装）
+- 全体の勝率と比べた差の表示（未実装）
+- デッキの枚数管理（同じカードの枚数に応じた入力制限）
+
+## 権利について
+
+非公式のファンメイドのアプリで、ゲームの権利者とは関係ありません。ゲームの名称・カード名などの権利は、各権利者に帰属します。本リポジトリには、ゲームの画像やデータは含まれていません。
